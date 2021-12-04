@@ -1,0 +1,2 @@
+sudo docker image prune <<< y
+sudo docker images

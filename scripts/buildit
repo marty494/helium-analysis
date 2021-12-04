@@ -1,0 +1,1 @@
+sudo docker build -t marty494/helium-analysis .
