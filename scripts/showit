@@ -1,2 +1,3 @@
+sudo docker container prune <<< y
 sudo docker image prune <<< y
 sudo docker images
