@@ -1,9 +1,10 @@
+import os
 import urllib3
 import json
 import logging
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
 DOMAIN_ENDPOINT = 'https://api.helium.io/v1/hotspots/'
 # DOMAIN_ENDPOINT = 'https://helium-api.stakejoy.com/v1/hotspots'
@@ -13,7 +14,7 @@ DOMAIN_ENDPOINT = 'https://api.helium.io/v1/hotspots/'
 # THIS IS USED TO IDENTIFY WHEN ACTIVITY HAS OCCURRED TO MINIMIZE API CALLS
 #
 def get_hotspot_activity_count(hotspot_address):
-    logger.debug('get_hotspot_activity_count for address: ' + hotspot_address)
+    logger.debug('get_hotspot_activity_count() address: ' + hotspot_address)
     
     api = DOMAIN_ENDPOINT + hotspot_address + '/activity/count'
     http = urllib3.PoolManager()
@@ -28,7 +29,7 @@ def get_hotspot_activity_count(hotspot_address):
 # ENDPOINT WILL NO LONGER BE USED FOR THIS HOTSPOT
 #
 def get_hotspot_data(hotspot_address):
-    logger.debug('get_hotspot_data for address: ' + hotspot_address)
+    logger.debug('get_hotspot_data() address: ' + hotspot_address)
     
     api = DOMAIN_ENDPOINT + hotspot_address
     http = urllib3.PoolManager()
@@ -54,7 +55,7 @@ def get_hotspot_data(hotspot_address):
 # THEN FOR THE CONTINUOUS PERIODIC ACTIVITY LOADING
 #
 def get_hotspot_activity(hotspot_address, min_time, max_time):
-    logger.debug('get_hotspot_activity - address: ' + hotspot_address + ', min_time: ' + str(min_time) + ', max_time: ' + str(max_time))
+    logger.debug('get_hotspot_activity() address: ' + hotspot_address + ', min_time: ' + str(min_time) + ', max_time: ' + str(max_time))
 
     api = DOMAIN_ENDPOINT + hotspot_address + "/activity?filter_types=&min_time=" + min_time + '&max_time=' + max_time
     http = urllib3.PoolManager()
@@ -69,7 +70,7 @@ def get_hotspot_activity(hotspot_address, min_time, max_time):
 # THE SEARCH CRITERIA. IT MAY ALSO FOLLOW A PREVIOUS CALL TO THIS ENDPOINT
 #
 def get_hotspot_activity_cursor(hotspot_address, cursor):
-    logger.debug('get_hotspot_activity_cursor - address: ' + hotspot_address)
+    logger.debug('get_hotspot_activity_cursor() address: ' + hotspot_address)
 
     api = DOMAIN_ENDPOINT + hotspot_address + '/activity?cursor=' + cursor
     http = urllib3.PoolManager()

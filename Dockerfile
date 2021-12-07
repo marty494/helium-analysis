@@ -20,5 +20,6 @@ ENV PATH=/root/.local:$PATH
 ENV PATH=/root/.local/bin:$PATH
 
 CMD [ "python", "./server.py" ]
+CMD [ "python", "./helium_main.py" ]
 
 
