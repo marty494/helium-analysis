@@ -15,6 +15,7 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 # THE MAIN PROCESSING LOOP - PROCESSES EACH CONFIGURED HOTSPOT
 #
 def process_hotspots(run_date):
+    logger.info('process_hotspots() run_date: ' + str(run_date))
     hotspots = config.get_hotspots()
 
     for hotspot in hotspots:
@@ -26,21 +27,18 @@ def process_hotspots(run_date):
 # PERFORMS ACTIVITY EXTRACTION:
 #
 def process_hotspot(hotspot_address, run_date):
-    logger.debug('Processing hotspot: ' + hotspot_address + ', for run_date: ' + run_date.astimezone().isoformat())
+    logger.info('process_hotspot() hotspot_address: ' + hotspot_address)
 
     try:
         hotspot_details = config.get_hotspot_details(hotspot_address)
 
     except Exception as error:
-        logger.error('process_hotspot() error: ' + str(error))
+        logger.exception('process_hotspot() error: ' + str(error))
         return
 
-    logger.debug('process_hotspot() name: [' + hotspot_details['name'] + 
-        '], born_date: [' + hotspot_details['born_date'] +
-        '], processed_date: [' + hotspot_details['processed_date'] +
-        '], activity_count: [' + hotspot_details['activity_count'] + ']')
+    logger.debug('process_hotspot() hotspot_details: ' + str(hotspot_details))
 
-    exit()
+    return
 
         
     # temp

@@ -21,10 +21,10 @@ def get_hotspots():
 def get_hotspot_details(hotspot_address):
     hotspot_config = kibana.get_document('helium-config', hotspot_address)
 
-    if hotspot_config['found'] == True:
-        hotspot_details = extract_details_from_config(hotspot_config)
-    else:
+    if hotspot_config == None:
         hotspot_details = create_hotspot_config(hotspot_address)
+    else:
+        hotspot_details = extract_details_from_config(hotspot_config)
 
     return hotspot_details
 
@@ -51,11 +51,9 @@ def create_hotspot_config(hotspot_address):
     hotspot_data = api.get_hotspot_data(hotspot_address)
     
     if hotspot_data['name'] == '':
-        raise KeyError('create_hotspot_config() error: ' + str(hotspot_data))
+        raise Exception('create_hotspot_config() error: ' + str(hotspot_data))
 
     activity_count = api.get_hotspot_activity_count(hotspot_address)
-
-    logger.debug('Adding hotspot details to config for address: ' + hotspot_address)
 
     hotspot_details = {
         'name': hotspot_data['name'],
@@ -64,12 +62,7 @@ def create_hotspot_config(hotspot_address):
         'activity_count': activity_count
     }
     
-    response = kibana.write_document('helium-config', hotspot_details, hotspot_address)
-
-    logger.debug('WANKO: ' + str(response))
-
-    if response['status'] != 200:
-        raise Exception('status: ' + str(response['status']))
+    kibana.write_document('helium-config', hotspot_details, hotspot_address)
 
     return hotspot_details
 
@@ -94,10 +87,10 @@ def update_hotspot_earliest_processed_date(table, address, date):
     if 'ResponseMetadata' in response:
         if 'HTTPStatusCode' in response['ResponseMetadata']:
             if response['ResponseMetadata']['HTTPStatusCode'] == 200:
-                logger.debug("SUCCESS - update_hotspot_earliest_processed_date - Updating: " + str(date))
+                logger.debug("update_hotspot_earliest_processed_date() UPDATED: " + str(date))
                 return True
 
-    logger.error("FAILED - update_hotspot_earliest_processed_date - Updating: " + str(response))
+    logger.error("update_hotspot_earliest_processed_date() FAILED: " + str(response))
     return False
 
 

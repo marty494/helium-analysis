@@ -27,41 +27,48 @@ def document_exists(index, document_id):
 # RETURN A CONFLICT STATUS CODE IF THE ENTRY ALREADY EXISTS
 #
 def write_document(index, document, document_id):
-    url = host + index + '/_create/' + document_id
-    r = requests.put(url, json=document, headers=headers)
+    uri = host + index + '/_create/' + document_id
+    r = requests.put(uri, json=document, headers=headers)
 
     if r.status_code == requests.codes.created:
-        logger.debug('CREATED - write_document - Created document: ' + str(document))
-        return True
+        logger.debug('write_document() CREATED document: ' + str(document))
+    else:
+        if r.status_code == requests.codes.conflict:
+            if document['error']['type'] == 'version_conflict_engine_exception':
+                # Already exists, just skip
+                logger.debug('write_document() ALREADY EXISTS document: ' + str(document))
+                return True
+            else:
+                raise Exception(r.text)
+        else:
+            raise Exception(r.text)
 
-    if r.status_code == requests.codes.conflict:
-        response = r.json()
-        if 'error' in response:
-            if 'type' in response['error']:
-                if response['error']['type'] == 'version_conflict_engine_exception':
-                    # Already exists, just skip
-                    logger.debug("SKIPPED - write_document - Already exists: " + str(document))
-                    return True
-
-    logger.error('FAILED - write_document - status_code: ' + str(r.status_code) + ', Error creating: ' + str(response))
-
-    return False
 
 #
 # RETRIEVE DOCUMENT FROM ELASTICSEARCH
 #
 def get_document(index, hotspot_address):
     uri = host + index + '/_doc/' + hotspot_address
+    r = requests.get(uri, headers=headers)
 
-    logger.info('uri: ' + uri)
+    logger.debug('r.status_code: ' + str(r.status_code))
+    logger.debug('r.text: ' + r.text)
 
-    response = requests.get(uri, headers=headers)
+    document = r.json()
 
-    try:
-        document = json.loads(response.text)
-
-    except:
-        document = response.text
+    if r.status_code == requests.codes.ok:
+        document = r.json() #json.loads(r.text)
+    else:
+        if r.status_code == requests.codes.not_found:
+            if 'error' in document:
+                if document['error']['type'] == 'index_not_found_exception':
+                    return None
+            else:
+                if document['found'] == False:
+                    return None
+                else:
+                    raise Exception(r.text)
+        else:
+            raise Exception(r.text)
 
     return document
-
