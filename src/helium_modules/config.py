@@ -1,5 +1,7 @@
 import os
 import json
+import pytz
+from dateutil import parser
 import helium_modules.helium_api as api
 import helium_modules.kibana as kibana
 import logging
@@ -55,10 +57,12 @@ def create_hotspot_config(hotspot_address):
 
     activity_count = api.get_hotspot_activity_count(hotspot_address)
 
+    timestamp_added = parser.parse(hotspot_data['timestamp_added'])
+
     hotspot_details = {
         'name': hotspot_data['name'],
-        'born_date': hotspot_data['timestamp_added'],
-        'processed_date': hotspot_data['timestamp_added'],
+        'born_date': timestamp_added.astimezone(pytz.utc).isoformat(),
+        'processed_date': timestamp_added.astimezone(pytz.utc).isoformat(),
         'activity_count': activity_count
     }
     
@@ -68,29 +72,8 @@ def create_hotspot_config(hotspot_address):
 
 
 #
-# USED BY THE HISTORIC ACTIVITY PROCESSING
-# WHEN ALL ACTIVITY HAS BEEN FETCHED BACK TO THE HOTSPOT BIRTH DATE
-# THEN THE HISTORIC PROCESSING WILL NO LONGER BE PERFORMED FOR THAT 
+# UPDATED EXISTING HOTSPOT DETAILS
 #
-def update_hotspot_earliest_processed_date(table, address, date):
-    response = table.update_item(
-        Key={
-            'address': address
-        },
-        UpdateExpression="set earliest_processed_date=:lpd",
-        ExpressionAttributeValues={
-            ':lpd': date
-        },
-        ReturnValues="UPDATED_NEW"
-    )
-
-    if 'ResponseMetadata' in response:
-        if 'HTTPStatusCode' in response['ResponseMetadata']:
-            if response['ResponseMetadata']['HTTPStatusCode'] == 200:
-                logger.debug("update_hotspot_earliest_processed_date() UPDATED: " + str(date))
-                return True
-
-    logger.error("update_hotspot_earliest_processed_date() FAILED: " + str(response))
-    return False
-
+def update_hotspot_config(hotspot_address, hotspot_details):
+    kibana.update_document('helium-config', hotspot_details, hotspot_address)
 

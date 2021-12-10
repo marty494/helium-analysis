@@ -6,3 +6,9 @@ requests==2.26.0
 
 # for helium_api.py
 urllib3==1.26.7
+
+# for helium_config.py
+python-dateutil==2.8.2
+
+# fior helium_main.py and config.py
+pytz==2021.3

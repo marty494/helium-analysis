@@ -55,9 +55,13 @@ def get_hotspot_data(hotspot_address):
 # THEN FOR THE CONTINUOUS PERIODIC ACTIVITY LOADING
 #
 def get_hotspot_activity(hotspot_address, min_time, max_time):
-    logger.debug('get_hotspot_activity() address: ' + hotspot_address + ', min_time: ' + str(min_time) + ', max_time: ' + str(max_time))
 
-    api = DOMAIN_ENDPOINT + hotspot_address + "/activity?filter_types=&min_time=" + min_time + '&max_time=' + max_time
+    str_min_time = str(min_time).replace("+00:00", "Z").replace(" ", "T")
+    str_max_time = str(max_time).replace("+00:00", "Z").replace(" ", "T")
+
+    logger.debug('get_hotspot_activity() address: ' + hotspot_address + ', min_time: ' + str_min_time + ', max_time: ' + str_max_time)
+
+    api = DOMAIN_ENDPOINT + hotspot_address + "/activity?filter_types=&min_time=" + str_min_time + '&max_time=' + str_max_time
     http = urllib3.PoolManager()
     response = http.request('GET', api)
     response = json.loads(response.data.decode('utf-8'))

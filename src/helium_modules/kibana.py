@@ -1,5 +1,4 @@
 import os
-import json
 import requests
 import logging
 
@@ -14,12 +13,13 @@ host = 'http://es01-dev:9200/'
 #
 def document_exists(index, document_id):
     url = host + index + '/_doc/' + document_id
-    response = requests.head(url)
+    r = requests.head(url)
    
-    logger.debug('document_exists() response: ' + str(response))
-    logger.debug('document_exists() index: ' + index + ', document_id: ' + document_id)
-
-    return True
+    logger.debug('document_exists() status_code: ' + str(r.status_code))
+    if r.status_code == requests.codes.OK:
+        return True
+    else:
+        return False
 
 
 #
@@ -37,11 +37,25 @@ def write_document(index, document, document_id):
             if document['error']['type'] == 'version_conflict_engine_exception':
                 # Already exists, just skip
                 logger.debug('write_document() ALREADY EXISTS document: ' + str(document))
-                return True
             else:
                 raise Exception(r.text)
         else:
             raise Exception(r.text)
+
+
+#
+# UPDATE DOCUMENT IN ELASTICSEARCH
+#
+def update_document(index, document, document_id):
+    uri = host + index + '/_doc/' + document_id
+    r = requests.put(uri, json=document, headers=headers)
+
+    logger.debug('update_document() status_code: ' + str(r.status_code))
+
+    if r.status_code == requests.codes.OK:
+        logger.debug('write_document() UPDATED document: ' + str(document))
+    else:
+        raise Exception(r.text)
 
 
 #
@@ -52,7 +66,6 @@ def get_document(index, hotspot_address):
     r = requests.get(uri, headers=headers)
 
     logger.debug('r.status_code: ' + str(r.status_code))
-    logger.debug('r.text: ' + r.text)
 
     document = r.json()
 

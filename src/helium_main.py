@@ -1,8 +1,7 @@
 import os
-import json
-import decimal
-from datetime import datetime
-from datetime import date
+import pytz
+from datetime import datetime, timedelta
+from dateutil import parser
 import helium_modules.helium_api as api
 import helium_modules.kibana as kibana
 import helium_modules.config as config
@@ -27,54 +26,77 @@ def process_hotspots(run_date):
 # PERFORMS ACTIVITY EXTRACTION:
 #
 def process_hotspot(hotspot_address, run_date):
-    logger.info('process_hotspot() hotspot_address: ' + hotspot_address)
+    logger.debug('process_hotspot() hotspot_address: ' + hotspot_address)
 
     try:
         hotspot_details = config.get_hotspot_details(hotspot_address)
+        logger.debug('process_hotspot() hotspot_details: ' + str(hotspot_details))
+        process_activity(hotspot_address, hotspot_details, run_date)
 
     except Exception as error:
         logger.exception('process_hotspot() error: ' + str(error))
         return
 
-    logger.debug('process_hotspot() hotspot_details: ' + str(hotspot_details))
-
-    return
-
-        
-    # temp
-    if hotspot_details['name'] == 'prehistoric-bone-yeti':
-        if hotspot_details['earliest_processed_date'] == hotspot_details['born_date']:
-            logger.debug('earliest_processed_date = ' + hotspot_details['earliest_processed_date'])
-            logger.debug('born_date = ' + hotspot_details['born_date'])
-
-            result = process_latest_activity(hotspot_address, hotspot_details, run_date)
-
-            if result == True:
-                logger.debug("SUCCESS - Processed periodic data")
-            else:
-                logger.error("FAILURE - Error processing periodic data")
-        else:
-            result = process_historic_activity(hotspot_address, hotspot_details)
-
-            if result == True:
-                logger.debug("SUCCESS - Fully updated historic data")
-            else:
-                logger.error("FAILURE - Error updating historic data")
 
 #
-# PERIODIC SCHEDULED ACTIVITY RETRIEVAL
-# READS FROM THE RUN DATE BACK TO THE LATEST PROCESSED DATE
-# THE LATEST DATE IS UPDATED AFTER SUCCESSFUL STORAGE OF THE ACTIVITY
+# FETCH NEW ACTIVITY FOR HOTSPOT AND SPECIFIED DATE RANGE
 #
-def process_latest_activity(hotspot_address, hotspot_details, run_date):
-    logger.debug('Processing latest activity - hotspot: ' + hotspot_details['name'])
-    logger.debug('NOT YET IMPLEMENTED')
-    if is_hotspot_activity(hotspot_address, hotspot_details):
-        logger.info('NEW ACTIVITY')
-    else:
-        logger.info('NO NEW ACTIVITY')
-        
-    return True
+def process_activity(hotspot_address, hotspot_details, run_date):
+    logger.info('process_activity() name: ' + hotspot_details['name'])
+
+    processed_date = parser.parse(hotspot_details['processed_date'])
+    born_date = parser.parse(hotspot_details['born_date'])
+
+    min_date = processed_date.replace(hour=0, minute=0, second=0)
+    min_date = min_date - timedelta(days=1)
+    if min_date < born_date:
+        min_date = born_date
+    max_date = processed_date.replace(hour=0, minute=0, second=0)
+    max_date = max_date + timedelta(days=1)
+    if max_date > run_date:
+        max_date = run_date
+
+    logger.info('process_activity() min_date: ' + str(min_date) + ', max_date: ' + str(max_date))
+
+    response = api.get_hotspot_activity(hotspot_address, min_date, max_date)
+
+    index = hotspot_details['name']
+
+    if 'data' in response:
+        if len(response['data']) > 0:
+            persist_data(hotspot_address, index, response['data'])
+
+    while 'cursor' in response:
+        response = api.get_hotspot_activity_cursor(hotspot_address, response['cursor'])
+        if 'data' in response:
+            if len(response['data']) > 0:
+                persist_data(hotspot_address, index, response['data'])
+
+    hotspot_details['processed_date'] = max_date.astimezone(pytz.utc).isoformat()
+    config.update_hotspot_config(hotspot_address, hotspot_details)
+
+
+#
+# PREPARE AND PERSIST THE ACTIVITY
+#
+def persist_data(hotspot_address, index, data):
+    logger.debug('persist_data() index: ' + index)
+
+    for document in data:
+        logger.debug('==================================================')
+        logger.debug('persist_data() document: ' + str(document))
+        if 'hash' in document and 'time' in document:
+            if kibana.document_exists(index, document['hash']):
+                continue
+
+            document = transform_time(document)
+            kibana.write_document(index, document, document['hash'])
+
+            # Do not update the config time at this point.
+            # The order of processing is not chronological and if this process
+            # does not complete successfully, it may not process some earlier
+            # entries. Also, updating the config everytime is not very efficient
+
 
 #
 # DETERMINES IF ANY ACTIVITY HAS OCCURRED SINCE THE LAST CHECK
@@ -89,62 +111,6 @@ def is_hotspot_activity(hotspot_address, hotspot_details):
     else:
         return False
 
-#
-# HISTORIC ACTIVITY RETRIEVAL
-# READS FROM THE EARLIEST DATE BACK TO THE BIRTH DATE
-# THE EARLIEST DATE IS UPDATED AFTER SUCCESSFUL STORAGE OF THE ACTIVITY
-#
-def process_historic_activity(hotspot_address, hotspot_details):
-    logger.debug('Processing historic activity - hotspot: ' + hotspot_details['name'])
-
-    min_date = hotspot_details['born_date'] # Read back to birth for historic data
-    max_date = hotspot_details['earliest_processed_date'] # Read from the current earliest date backwards
-    response = api.get_hotspot_activity(hotspot_address, min_date, max_date)
-
-    if 'data' in response:
-        if len(response['data']) > 0:
-            result = persist_data(hotspot_address, hotspot_details['name'], response['data'])
-            if result == False:
-                logger.error('FAILED - process_historic_activity - Persisting data: ' + str(response))
-                return False
-
-    while 'cursor' in response:
-        response = api.get_hotspot_activity_cursor(hotspot_address, response['cursor'])
-        if 'data' in response:
-            if len(response['data']) > 0:
-                result = persist_data(hotspot_address, hotspot_details['name'], response['data'])
-                if result == False:
-                    logger.error('FAILED - process_historic_activity - Persisting cursor: ' + str(response))
-                    return False
-
-    result = config.update_hotspot_earliest_processed_date(hotspot_address, hotspot_details['born_date'])
-
-    return result
-
-#
-# PREPARE AND PERSIST THE ACTIVITY
-#
-def persist_data(hotspot_address, index, data):
-    logger.debug('persist_data - index: ' + index)
-    for document in data:
-        logger.debug('persist_data - document: ' + str(document))
-        if 'hash' in document and 'time' in document:
-            exists = kibana.document_exists(index, document['hash'])
-            if exists:
-                return True
-            document = transform_time(document)
-            result = kibana.write_document(index, document, document['hash'])
-            if result == True:
-                result = config.update_hotspot_earliest_processed_date(hotspot_address, document['time'])
-                if result == False:
-                    return False
-            else:
-                return False
-        else:
-            logger.error('FAILED - persist_data - Missing hash and/or time')
-            return False
-
-    return True
 
 #
 # FOR THE PURPOSING OF TEMPORAL INDEXING IT IS NECESSARY TO TURN THE TIME
@@ -152,16 +118,18 @@ def persist_data(hotspot_address, index, data):
 # DATE FIELD, BUT THE TIME IN MS IS NOT OF ANY USE
 #
 def transform_time(document):
-    timeMs = document['time']
-    strDate = datetime.fromtimestamp(timeMs)
-    document['time'] = strDate.astimezone().isoformat()
+    time_ms = document['time']
+    str_date = datetime.fromtimestamp(time_ms)
+    str_date = str_date.astimezone(pytz.utc).isoformat()
+    str_date = str_date.replace("+00:00", "Z").replace(" ", "T")
+    document['time'] = str_date
     return document
 
 #
 # THE ENTRY POINT WHEN LAUNCHING
 #
 if __name__ == '__main__':
-    run_date = datetime.now()
+    run_date = datetime.now(pytz.utc)
     logger.info('Loading Helium function at time: ' + run_date.astimezone().isoformat())
     process_hotspots(run_date)
 
