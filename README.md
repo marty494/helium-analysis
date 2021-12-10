@@ -38,7 +38,7 @@ sudo docker run \
 ```
 
 ## Helium API:
-These are the Helium API endpoints used. See (Helium API reference)[https://docs.helium.com/api/blockchain/introduction/]
+These are the Helium API endpoints used. See [Helium API reference](https://docs.helium.com/api/blockchain/introduction/)
 
 ### To obtain the creation date and name of the hotspot
 This is performed the first time the hotspot is added and saved to ElasticSearch for future use:
