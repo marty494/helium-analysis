@@ -2,12 +2,18 @@ import os
 import urllib3
 import json
 import logging
+import random
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
-DOMAIN_ENDPOINT = 'https://api.helium.io/v1/hotspots/'
-# DOMAIN_ENDPOINT = 'https://helium-api.stakejoy.com/v1/hotspots'
+def set_domain_endpoint():
+    global DOMAIN_ENDPOINT
+    if random.randint(1,2) == 1:
+        DOMAIN_ENDPOINT = 'https://api.helium.io/v1/hotspots/'
+    else:
+        DOMAIN_ENDPOINT = 'https://helium-api.stakejoy.com/v1/hotspots'
+
 
 #
 # OBTAINS THE COUNTERS FOR THE SUPPLIED HOTSPOT

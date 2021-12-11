@@ -21,17 +21,18 @@ def process_hotspots(run_date):
         process_hotspot(hotspot['hotspot_address'], run_date)
 
 #
-# PROCESSES THE SUPPLIED HOTSPOT
+# PROCESSES THE SUPPLIED HOTSPOT UNTIL THE RUN DATE IS REACHED
 # RETRIEVES AND POPULATES HOTSPOT DETAILS IF NECESSARY
-# PERFORMS ACTIVITY EXTRACTION:
 #
 def process_hotspot(hotspot_address, run_date):
     logger.debug('process_hotspot() hotspot_address: ' + hotspot_address)
 
     try:
-        hotspot_details = config.get_hotspot_details(hotspot_address)
-        logger.debug('process_hotspot() hotspot_details: ' + str(hotspot_details))
-        process_activity(hotspot_address, hotspot_details, run_date)
+        more_data = True
+        while more_data:
+            hotspot_details = config.get_hotspot_details(hotspot_address)
+            logger.debug('process_hotspot() hotspot_details: ' + str(hotspot_details))
+            more_data = process_activity(hotspot_address, hotspot_details, run_date)
 
     except Exception as error:
         logger.exception('process_hotspot() error: ' + str(error))
@@ -40,6 +41,8 @@ def process_hotspot(hotspot_address, run_date):
 
 #
 # FETCH NEW ACTIVITY FOR HOTSPOT AND SPECIFIED DATE RANGE
+# RETURNS THE TRUE IF ALL ACTIVITY HAS BEEN PROCESSED
+# FALSE MEANS THERE IS STILL MORE ACTIVITY AVAILABLE FOR LATER DATES
 #
 def process_activity(hotspot_address, hotspot_details, run_date):
     logger.info('process_activity() name: ' + hotspot_details['name'])
@@ -74,6 +77,8 @@ def process_activity(hotspot_address, hotspot_details, run_date):
 
     hotspot_details['processed_date'] = max_date.astimezone(pytz.utc).isoformat()
     config.update_hotspot_config(hotspot_address, hotspot_details)
+
+    return max_date < run_date
 
 
 #
@@ -131,5 +136,6 @@ def transform_time(document):
 if __name__ == '__main__':
     run_date = datetime.now(pytz.utc)
     logger.info('Loading Helium function at time: ' + run_date.astimezone().isoformat())
+    api.set_domain_endpoint()
     process_hotspots(run_date)
 
