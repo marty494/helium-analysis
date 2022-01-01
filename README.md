@@ -20,7 +20,16 @@ This is an example configuration file:
 ```
 [
     { "hotspot_address": "31459265358979xxxBLAH99xxx7waBLAHbeeefffLAHPM3BLAHXX" },
-    { "hotspot_address": "27812818281828xxxBLAH99xxx7waBLAHbeeefffLAHPM3BLAHXX" }
+    { 
+        "hotspot_address": "27812818281828xxxBLAH99xxx7waBLAHbeeefffLAHPM3BLAHXX",
+        "antennas": [
+            { "id": 1, "date":"2021-09-20", "dbi": 4.5, "mast_ft": 0, "details": "Bedroom + 1m cable + stock antenna" },
+            { "id": 2, "date":"2021-09-27", "dbi": 8.5, "mast_ft": 0, "details": "Loft + 1m cable + Paradar antenna" },
+            { "id": 3, "date":"2021-09-29", "dbi": 8.5, "mast_ft": 6, "details": "Chimney + 5m X-400 cable + Paradar antenna" },
+            { "id": 8, "date":"2021-12-19", "dbi": 6.0, "mast_ft": 11, "details": "Chimney + 5m LMR-400 cable + pigtail + McGill antenna" }
+     ]
+    },
+    { "hotspot_address": "77777777775555xxxBLAH99xxx7waBLAHbeeefffLAHPM3BLAHXX" }
 ]
 ```
 
