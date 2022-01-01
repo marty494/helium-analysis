@@ -77,15 +77,17 @@ Each record may contain zero, one, or more rewards and therefore you will need t
 - Format: 0,0.[00000000]
 Script:
 ```
- for (config in children) {
-                  if (!config.containsKey('stock')) {
-                    childrenAreMatching.add(false);
-                    continue;
-                  } else if (!config['stock']['is_in_stock']
-                      || config['special_price'] == null
-                      || config['special_from_date'] == null 
-                      || config['special_to_date'] == null) {
-                    childrenAreMatching.add(false);
-                    continue;
-                  }
+ArrayList rewards = params._source['rewards'];
+if (rewards != null) {
+    double hnt = 0.0;
+    for (reward in rewards) {
+        if (reward.containsKey('amount')) {
+            hnt = hnt + reward['amount'];
+        }
+    }
+    return hnt / 100000000;
+}
+else {
+    return 0.0;
+}
 ```
