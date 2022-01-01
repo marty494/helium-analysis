@@ -12,7 +12,7 @@ def set_domain_endpoint():
     if random.randint(1,2) == 1:
         DOMAIN_ENDPOINT = 'https://api.helium.io/v1/hotspots/'
     else:
-        DOMAIN_ENDPOINT = 'https://helium-api.stakejoy.com/v1/hotspots'
+        DOMAIN_ENDPOINT = 'https://helium-api.stakejoy.com/v1/hotspots/'
 
 
 #

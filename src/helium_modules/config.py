@@ -1,9 +1,10 @@
 import os
 import json
 import pytz
+from datetime import datetime
 from dateutil import parser
 import helium_modules.helium_api as api
-import helium_modules.kibana as kibana
+import helium_modules.elastic as elastic
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,6 +12,28 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
 #
 # LOAD IN THE CONFIG FILE WHICH CONTAINS THE HOTSPOT ADDRESSES TO BE PROCESSED
+# AND THE ANTENNA DATA WHICH IS ADDED ON TO THE ELASTIC DATA
+#
+# THE antennas ARRAY MUST HAVE THE FOLLOWING FIELDS:
+# - id: ANY INTEGER IN ANY ORDER (FOR DATE SORTING PURPOSES)
+# - date: YYYY-MM-DD IN ANY ORDER (WILL BE SORTED BY APPLICATION)
+# - mast_ft: ANY INTEGER (HEIGHT IN FEET OF THE MAST)
+# - details: DESCRIPTION OF ANTENNA CONFIGURATION
+#
+# REQUIRED FORMAT EXAMPLE:
+# [
+#   {
+#     "hotspot_address": "1111111111aaaaaaaaaaBBBBBBBBBB9999999999zzzzzzzzzzZ",
+#     "antennas": [
+#         { "id": 1, "date":"2021-09-26", "dbi": 4.5, "mast_ft: 0, "details": "Bedroom + 1m cable + stock antenna" },
+#         { "id": 2, "date":"2021-09-27", "dbi": 8.5, "mast_ft: 0, "details": "Loft + 1m cable + Paradar antenna" },
+#         { "id": 3, "date":"2021-12-19", "dbi": 6.0, "mast_ft: 11, "details": "Chimney + 5m LMR-400 cable + pigtail + Paradar antenna" }
+#     ]
+#   },
+#   {
+#     "hotspot_address": "2222222222bbbbbbbbbbCCCCCCCCCC5555555555xxxxxxxxxxY",
+#   }
+# ]
 #
 def get_hotspots():
     configPath = "/data/config.json"
@@ -19,9 +42,19 @@ def get_hotspots():
 
     return configJson
 
+# GET THE ANTENNA DATA FROM THE CONFIG FOR THE SPECIFIED HOTSPOT
+# THE DATA IS THEN SORTED WITH THE LATEST DATE FIRST
+# IF NOT FOUND THEN RETURN AN EMPTY STRING
+def get_antennas(hotspot):
+    sorted_antennas = ''
+    if 'antennas' in hotspot:
+        antennas = hotspot['antennas']
+        sorted_antennas = sorted(antennas, 
+            key=lambda antenna: datetime.strptime(antenna['date'], '%Y-%m-%d'), reverse=True)
+    return sorted_antennas
 
 def get_hotspot_details(hotspot_address):
-    hotspot_config = kibana.get_document('helium-config', hotspot_address)
+    hotspot_config = elastic.get_document('helium-config', hotspot_address)
 
     if hotspot_config == None:
         hotspot_details = create_hotspot_config(hotspot_address)
@@ -66,7 +99,7 @@ def create_hotspot_config(hotspot_address):
         'activity_count': activity_count
     }
     
-    kibana.write_document('helium-config', hotspot_details, hotspot_address)
+    elastic.write_document('helium-config', hotspot_details, hotspot_address)
 
     return hotspot_details
 
@@ -75,5 +108,5 @@ def create_hotspot_config(hotspot_address):
 # UPDATED EXISTING HOTSPOT DETAILS
 #
 def update_hotspot_config(hotspot_address, hotspot_details):
-    kibana.update_document('helium-config', hotspot_details, hotspot_address)
+    elastic.update_document('helium-config', hotspot_details, hotspot_address)
 

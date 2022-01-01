@@ -1,7 +1,7 @@
 # for webserver
 Flask==1.1.1
 
-# for kibana.py
+# for elastic.py
 requests==2.26.0
 
 # for helium_api.py
