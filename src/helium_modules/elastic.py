@@ -1,6 +1,11 @@
 import os
+from urllib.request import HTTPBasicAuthHandler
 import requests
+from requests.auth import HTTPBasicAuth
 import logging
+
+elastic_username = os.environ.get("ELASTICSEARCH_USERNAME")
+elastic_password = os.environ.get("ELASTICSEARCH_PASSWORD")
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -13,7 +18,7 @@ host = 'http://es01-dev:9200/'
 #
 def document_exists(index, document_id):
     url = host + index + '/_doc/' + document_id
-    r = requests.head(url)
+    r = requests.head(url, auth=HTTPBasicAuth(elastic_username, elastic_password))
    
     logger.debug('document_exists() status_code: ' + str(r.status_code))
     if r.status_code == requests.codes.OK:
@@ -28,7 +33,7 @@ def document_exists(index, document_id):
 #
 def write_document(index, document, document_id):
     uri = host + index + '/_create/' + document_id
-    r = requests.put(uri, json=document, headers=headers)
+    r = requests.put(uri, json=document, headers=headers, auth=HTTPBasicAuth(elastic_username, elastic_password))
 
     if r.status_code == requests.codes.created:
         logger.debug('write_document() CREATED document: ' + str(document))
@@ -48,7 +53,7 @@ def write_document(index, document, document_id):
 #
 def update_document(index, document, document_id):
     uri = host + index + '/_doc/' + document_id
-    r = requests.put(uri, json=document, headers=headers)
+    r = requests.put(uri, json=document, headers=headers, auth=HTTPBasicAuth(elastic_username, elastic_password))
 
     logger.debug('update_document() status_code: ' + str(r.status_code))
 
@@ -63,7 +68,7 @@ def update_document(index, document, document_id):
 #
 def get_document(index, hotspot_address):
     uri = host + index + '/_doc/' + hotspot_address
-    r = requests.get(uri, headers=headers)
+    r = requests.get(uri, headers=headers, auth=HTTPBasicAuth(elastic_username, elastic_password))
 
     logger.debug('r.status_code: ' + str(r.status_code))
 
