@@ -20,7 +20,16 @@ This is an example configuration file:
 ```
 [
     { "hotspot_address": "31459265358979xxxBLAH99xxx7waBLAHbeeefffLAHPM3BLAHXX" },
-    { "hotspot_address": "27812818281828xxxBLAH99xxx7waBLAHbeeefffLAHPM3BLAHXX" }
+    { 
+        "hotspot_address": "27812818281828xxxBLAH99xxx7waBLAHbeeefffLAHPM3BLAHXX",
+        "antennas": [
+            { "id": 1, "date":"2021-09-20", "dbi": 4.5, "mast_ft": 0, "details": "Bedroom + 1m cable + stock antenna" },
+            { "id": 2, "date":"2021-09-27", "dbi": 8.5, "mast_ft": 0, "details": "Loft + 1m cable + Paradar antenna" },
+            { "id": 3, "date":"2021-09-29", "dbi": 8.5, "mast_ft": 6, "details": "Chimney + 5m X-400 cable + Paradar antenna" },
+            { "id": 8, "date":"2021-12-19", "dbi": 6.0, "mast_ft": 11, "details": "Chimney + 5m LMR-400 cable + pigtail + McGill antenna" }
+     ]
+    },
+    { "hotspot_address": "77777777775555xxxBLAH99xxx7waBLAHbeeefffLAHPM3BLAHXX" }
 ]
 ```
 
@@ -32,6 +41,8 @@ sudo docker run \
 	--network elastic \
 	-p 5000:5000 \
 	-e LOGLEVEL="${LOG_LEVEL:-INFO}" \
+	-e ELASTICSEARCH_USERNAME=username \
+	-e ELASTICSEARCH_PASSWORD=password \
 	--name helium-analysis \
 	-v /home/ubuntu/helium-analysis:/data \
 	marty494/helium-analysis
@@ -68,15 +79,17 @@ Each record may contain zero, one, or more rewards and therefore you will need t
 - Format: 0,0.[00000000]
 Script:
 ```
- for (config in children) {
-                  if (!config.containsKey('stock')) {
-                    childrenAreMatching.add(false);
-                    continue;
-                  } else if (!config['stock']['is_in_stock']
-                      || config['special_price'] == null
-                      || config['special_from_date'] == null 
-                      || config['special_to_date'] == null) {
-                    childrenAreMatching.add(false);
-                    continue;
-                  }
+ArrayList rewards = params._source['rewards'];
+if (rewards != null) {
+    double hnt = 0.0;
+    for (reward in rewards) {
+        if (reward.containsKey('amount')) {
+            hnt = hnt + reward['amount'];
+        }
+    }
+    return hnt / 100000000;
+}
+else {
+    return 0.0;
+}
 ```
