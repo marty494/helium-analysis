@@ -41,6 +41,8 @@ sudo docker run \
 	--network elastic \
 	-p 5000:5000 \
 	-e LOGLEVEL="${LOG_LEVEL:-INFO}" \
+	-e ELASTICSEARCH_USERNAME=username \
+	-e ELASTICSEARCH_PASSWORD=password \
 	--name helium-analysis \
 	-v /home/ubuntu/helium-analysis:/data \
 	marty494/helium-analysis
