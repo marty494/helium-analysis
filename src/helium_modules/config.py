@@ -53,21 +53,38 @@ def get_antennas(hotspot):
             key=lambda antenna: datetime.strptime(antenna['date'], '%Y-%m-%d'), reverse=True)
     return sorted_antennas
 
+#
+# GET THE SPECIFIED HOTSPOT CONFIG DETAILS
+# IF NOT FOUND THEN CREATE THE CONFIG FOR THIS HOTSPOT
+#
 def get_hotspot_details(hotspot_address):
     hotspot_config = elastic.get_document('helium-config', hotspot_address)
 
     if hotspot_config == None:
         hotspot_details = create_hotspot_config(hotspot_address)
     else:
-        hotspot_details = extract_details_from_config(hotspot_config)
+        hotspot_details = extract_hotspot_details_from_config(hotspot_config)
 
     return hotspot_details
 
+#
+# GET THE SPECIFIED COIN CONFIG DETAILS
+# IF NOT FOUND THEN CREATE THE CONFIG FOR THIS COIN
+#
+def get_coin_details(coin):
+    coin_config = elastic.get_document('coin-config', coin)
+
+    if coin_config == None:
+        coin_details = create_coin_config(coin)
+    else:
+        coin_details = extract_coin_details_from_config(coin_config)
+
+    return coin_details
 
 #
 # EXTRACT HOTSPOT DETAILS FROM CONFIG JSON
 #
-def extract_details_from_config(hotspot_config):
+def extract_hotspot_details_from_config(hotspot_config):
     config = hotspot_config['_source']
 
     hotspot_details = {
@@ -78,6 +95,19 @@ def extract_details_from_config(hotspot_config):
     }
 
     return hotspot_details
+
+#
+# EXTRACT COIN DETAILS FROM CONFIG JSON
+#
+def extract_coin_details_from_config(coin_config):
+    config = coin_config['_source']
+
+    coin_details = {
+        'earliest_coin_date': config['earliest_coin_date'],
+        'latest_coin_date': config['latest_coin_date']
+    }
+
+    return coin_details
 
 #
 # INSERT NEW HOTSPOT DETAILS INTO CONFIG
@@ -105,8 +135,29 @@ def create_hotspot_config(hotspot_address):
 
 
 #
+# INSERT DEFAULT COIN DETAILS INTO CONFIG
+#
+def create_coin_config(coin):
+    now = datetime.now(pytz.utc)
+
+    coin_details = {
+        'earliest_coin_date': now.astimezone(pytz.utc).isoformat(),
+        'latest_coin_date': now.astimezone(pytz.utc).isoformat()
+    }
+
+    elastic.write_document('coin-config', coin_details, coin)
+
+    return coin_details
+
+
+#
 # UPDATED EXISTING HOTSPOT DETAILS
 #
 def update_hotspot_config(hotspot_address, hotspot_details):
     elastic.update_document('helium-config', hotspot_details, hotspot_address)
 
+#
+# UPDATED EXISTING COIN DETAILS
+#
+def update_coin_config(coin, coin_details):
+    elastic.update_document('coin-config', coin_details, coin)
